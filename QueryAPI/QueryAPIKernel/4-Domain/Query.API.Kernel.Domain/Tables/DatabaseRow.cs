@@ -8,6 +8,6 @@ namespace Query.API.Kernel.Domain.Tables
 {
     public class DatabaseRow
     {
-        public IDictionary<string, object> Fields { get; private set; } = new Dictionary<string, object>();
+        public IDictionary<string, object> Fields { get; set; }
     }
 }

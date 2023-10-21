@@ -18,8 +18,4 @@
     <ProjectReference Include="..\Core\Query.API.Kernel.Service.Core.APIBASE\Query.API.Kernel.Service.Core.APIBASE.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Controllers\" />
-  </ItemGroup>
-
 </Project>

@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Query.API.Kernel.Service.Core.APIBASE.Base
+namespace Query.API.Kernel.Service.Core.APIBASE.StartupConfiguration.Base
 {
     [ApiController]
     [Route("api/[controller]")]

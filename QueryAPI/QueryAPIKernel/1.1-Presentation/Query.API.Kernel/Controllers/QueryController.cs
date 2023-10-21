@@ -40,7 +40,7 @@ namespace Query.API.Kernel.Controllers
             }
         }
         [HttpGet("FetchAllTablesInASchemas")]
-        public async Task<IActionResult> FetchAllTablesInSchema(string schema)
+        public async Task<IActionResult> FetchAllTablesInSchema(string schema )
         {
             try
             {
@@ -65,7 +65,7 @@ namespace Query.API.Kernel.Controllers
                 throw ex;
             }
         }
-        [HttpGet("FetchAllTablesInASchemas")]
+        [HttpGet("FetchTable")]
         public async Task<IActionResult> FetchTable(string tableName)
         {
             try

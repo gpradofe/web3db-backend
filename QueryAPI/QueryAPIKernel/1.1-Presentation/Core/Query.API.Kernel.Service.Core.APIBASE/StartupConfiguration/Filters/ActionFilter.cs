@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Query.API.Kernel.Service.Core.APIBASE.Filters
+namespace Query.API.Kernel.Service.Core.APIBASE.StartupConfiguration.Filters
 {
     public class ActionFilter : IActionFilter
     {

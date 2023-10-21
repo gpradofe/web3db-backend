@@ -8,11 +8,11 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="7.0.12" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="7.0.12" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\4-Domain\Query.API.Kernel.Domain\Query.API.Kernel.Domain.csproj" />
-    <ProjectReference Include="..\Core\Query.API.Kernel.DataAccess.Persisten\Query.API.Kernel.DataAccess.Persistence.csproj" />
+    <ProjectReference Include="..\..\..\..\4-Domain\Core\Query.API.Kernel.Domain.Core\Query.API.Kernel.Domain.Core.csproj" />
   </ItemGroup>
 
 </Project>

@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Query.API.Kernel.Service.Core.APIBASE.Swagger
+namespace Query.API.Kernel.Service.Core.APIBASE.StartupConfiguration.Swagger
 {
     public static class ServicesExtensions
     {

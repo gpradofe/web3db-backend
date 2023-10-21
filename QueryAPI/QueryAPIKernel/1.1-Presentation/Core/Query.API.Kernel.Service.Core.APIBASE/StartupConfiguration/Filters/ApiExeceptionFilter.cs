@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Query.API.Kernel.Util.Exceptions;
 
-namespace Query.API.Kernel.Service.Core.APIBASE.Filters
+namespace Query.API.Kernel.Service.Core.APIBASE.StartupConfiguration.Filters
 {
     public class ApiExceptionFilter : ExceptionFilterAttribute
     {
