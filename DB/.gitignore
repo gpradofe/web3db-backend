@@ -1,0 +1,5 @@
+/metastore_db/seg0/*
+/metastore_db/tmp/*
+/metastore_db/log/*
+/metastore_db/*.lck
+*.log
