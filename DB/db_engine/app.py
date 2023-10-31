@@ -1,48 +1,21 @@
 from flask import Flask, request, jsonify
-from flask_restx import Api, Resource
+from flask_restx import Api, Resource, fields
 import requests
-import subprocess
 from pyspark.sql import SparkSession
 import os
+import json
 
 app = Flask(__name__)
-api = Api(app, version='1.0', title='IPFS Hive Query API', description='A simple API using Flask-Restx and IPFS')
-
+api = Api(app, version='1.0', title='IPFS Hive Query API', description='A simple API using Flask-RestX and IPFS')
 
 IPFS_API_URL = os.environ.get('IPFS_API_URL', "http://ipfs:5001")
 SPARK_MASTER = os.environ.get('SPARK_MASTER', 'spark://spark-master:7077')
 
-class DBManager:
-
-    @staticmethod
-    def dump_database():
-        dump_filename = "/dumps/full_dump.sql"
-        subprocess.call(["pg_dumpall", ">", dump_filename])
-
-        with open(dump_filename, 'r') as f:
-            return f.read()
-
-    @staticmethod
-    def recreate_from_dump(sql_dump):
-        dump_filename = "/dumps/temp_dump.sql"
-        with open(dump_filename, 'w') as f:
-            f.write(sql_dump)
-        subprocess.call(["psql", "<", dump_filename])
-    
-    @staticmethod
-    def create_table(query):
-        subprocess.call(["psql", "-c", query])
-        return "Table created successfully"
-
-
-
 class IPFSManager:
-
     @staticmethod
     def upload_to_ipfs(data):
         files = {'file': ('dump.sql', data)}
         response = requests.post(f"{IPFS_API_URL}/api/v0/add", files=files)
-
         if response.status_code == 200:
             ipfs_hash = response.json().get("Hash")
             return ipfs_hash
@@ -57,53 +30,66 @@ class IPFSManager:
         else:
             raise ConnectionError(f"Failed to fetch data from IPFS. Status code: {response.status_code}")
 
-
 class QueryEngine:
-
     @staticmethod
-    def execute_query(query):
+    def execute_query(query, sql_dump=None):
         spark = SparkSession.builder \
             .appName("IPFS Hive Query Engine") \
-            .enableHiveSupport() \
             .master(SPARK_MASTER) \
+            .enableHiveSupport() \
             .getOrCreate()
 
-        result = spark.sql(query)
-        return result.collect()
+        # Re-create database state from dump
+        if sql_dump:
+            queries = json.loads(sql_dump)
+            for q in queries:
+                spark.sql(q)
 
+        # Execute the current query
+        result = spark.sql(query).collect()
+        return result
 
 query_ns = api.namespace('query', description='Query operations')
 
+query_model = api.model('Query', {
+    'query': fields.String(required=True, description='SQL Query'),
+    'hash': fields.String(description='IPFS Hash of the existing database state'),
+})
+
 @query_ns.route('/')
 class QueryResource(Resource):
-
-    @api.expect(api.model('Query', {
-        'query': api.String(required=True, description='SQL Query'),
-        'metamask_key': api.String(required=True, description='Metamask Key'),
-        'hash': api.String(required=True, description='IPFS Hash'),
-    }))
+    @api.expect(query_model)
     def post(self):
         '''Execute a query and return the results'''
         query = request.json.get("query")
-        metamask_key = request.json.get("metamask_key")
         data_hash = request.json.get("hash")
 
-        if 'CREATE TABLE' in query.upper():
-            message = DBManager.create_table(query)
-            new_sql_dump = DBManager.dump_database()
-            new_ipfs_hash = IPFSManager.upload_to_ipfs(new_sql_dump)
-            return {"message": message, "new_hash": new_ipfs_hash}
+        try:
+            modifying_queries = []
 
-        sql_dump = IPFSManager.fetch_sql_dump_from_ipfs(data_hash)
-        DBManager.recreate_from_dump(sql_dump)
-        result = QueryEngine.execute_query(query)
+            # Skip IPFS fetch for dummy hash or CREATE TABLE queries
+            if data_hash != "dummy_ipfs_hash" and 'CREATE TABLE' not in query.upper():
+                try:
+                    sql_dump = IPFSManager.fetch_sql_dump_from_ipfs(data_hash)
+                    modifying_queries = json.loads(sql_dump)
+                except requests.exceptions.RequestException as e:
+                    return {"error": f"Failed to fetch data from IPFS: {str(e)}"}, 500
 
-        if 'UPDATE' in query.upper() or 'INSERT' in query.upper() or 'DELETE' in query.upper():
-            new_sql_dump = DBManager.dump_database()
-            new_ipfs_hash = IPFSManager.upload_to_ipfs(new_sql_dump)
-            return {"message": "Query executed and database updated", "data": result, "new_hash": new_ipfs_hash}
+            # Execute the query
+            result = QueryEngine.execute_query(query, sql_dump if data_hash != "dummy_ipfs_hash" and 'SELECT' not in query.upper() else None)
 
-        return {"message": "Query executed successfully", "data": result}
+            if 'SELECT' not in query.upper():
+                # Update the dump for modifying queries
+                modifying_queries.append(query)
+                new_dump = json.dumps(modifying_queries)
+                new_ipfs_hash = IPFSManager.upload_to_ipfs(new_dump)
+                return {"message": "Query executed successfully", "data": result, "new_hash": new_ipfs_hash}
+            else:
+                # For SELECT queries, just return the result
+                return {"data": result}
+
+        except Exception as e:
+            return {"error": str(e)}, 500
 
 
 if __name__ == "__main__":
