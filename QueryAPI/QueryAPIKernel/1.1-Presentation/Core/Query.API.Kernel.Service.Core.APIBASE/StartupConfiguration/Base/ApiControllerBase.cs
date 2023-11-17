@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Query.API.Kernel.Service.Core.APIBASE.StartupConfiguration.Filters;
 using System;
 using System.Collections.Generic;
 using System.Linq;

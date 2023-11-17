@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Hosting;
+using Query.API.Kernel;
 
 public class Program
 {

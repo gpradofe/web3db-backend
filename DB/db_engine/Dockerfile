@@ -1,11 +1,20 @@
-# Using Python 3.8 slim image
+# Step 1: AdoptOpenJDK for Java 11
+FROM adoptopenjdk:11-jre-hotspot as java_base
+
+# Step 2: Start from Python 3.8 base image
 FROM python:3.8-slim
 
-# Set a working directory
+# Set the working directory in the container
 WORKDIR /app
 
-# Install necessary build dependencies for compiling packages
-# Combining RUN commands into a single RUN to reduce image layers
+# Copy Java Runtime from the Java base image
+COPY --from=java_base /opt/java/openjdk /opt/java/openjdk
+
+# Set JAVA_HOME environment variable
+ENV JAVA_HOME=/opt/java/openjdk
+ENV PATH="$JAVA_HOME/bin:$PATH"
+
+# Install necessary build dependencies for compiling Python packages
 RUN apt-get update -y \
     && apt-get install -y gcc g++ libc-dev libffi-dev libsasl2-dev libssl-dev \
     && apt-get clean \
@@ -15,13 +24,12 @@ RUN apt-get update -y \
 COPY . /app
 
 # Install Python dependencies
-# Using a requirements.txt file is generally a good practice to manage dependencies
-RUN pip install --no-cache-dir --trusted-host pypi.python.org \
+RUN pip install --trusted-host pypi.python.org \
     Flask==2.0.1 \
     flask-restx==0.5.1 \
     Werkzeug==2.0.1 \
     requests \
-    pyspark \
+    pyspark==3.0.0 \
     pyhive \
     thrift \
     thrift_sasl \

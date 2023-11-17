@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Query.API.Kernel.Application.Query.Interfaces;
+using Query.API.Kernel.Domain.Contracts.DTOs;
 using Query.API.Kernel.Service.Core.APIBASE.StartupConfiguration.Base;
 using Serilog.Context;
 
@@ -7,14 +9,15 @@ namespace Query.API.Kernel.Controllers
     public class QueryController : ApiControllerBase<QueryController>
     {
         #region Attributes
-
+        IQueryApplication _queryApplication;
         #endregion
-        public QueryController(ILogger<QueryController> logger) : base(logger)
+        public QueryController(ILogger<QueryController> logger, IQueryApplication queryApplication) : base(logger)
         {
             _logger = logger;
+            _queryApplication = queryApplication;
         }
-        [HttpGet("FetchAllSchemas")]
-        public async Task<IActionResult> FetchAllSchemas()
+        [HttpPost("SendQuery")]
+        public async Task<IActionResult> PostNewQuery([FromBody] SendQueryDTO sendQueryDTO)
         {
             try
             {
@@ -22,10 +25,10 @@ namespace Query.API.Kernel.Controllers
                 {
                     _logger.LogInformation("Fetch all schemas in a database");
 
-                    var schemas = await _QueryApplication.GetAllSchemasInDatabase();
-                    if (schemas != null && schemas.Any())
+                    ReturnQueryResults response = await _queryApplication.SendQueryAndGetResultsAsync(sendQueryDTO);
+                    if (response != null)
                     {
-                        return Ok(schemas);
+                        return Ok(response);
                     }
                     else
                     {
@@ -36,84 +39,6 @@ namespace Query.API.Kernel.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error on FetchAllSchemas");
-                throw ex;
-            }
-        }
-        [HttpGet("FetchAllTablesInASchemas")]
-        public async Task<IActionResult> FetchAllTablesInSchema(string schema )
-        {
-            try
-            {
-                using (LogContext.PushProperty("Fetching all tables in schema", schema))
-                {
-                    _logger.LogInformation("Fetch all tables in a schema");
-
-                    var tables = await _QueryApplication.GetAllTablesInSchema();
-                    if (tables != null && tables.Any())
-                    {
-                        return Ok(tables);
-                    }
-                    else
-                    {
-                        return NoContent();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error on FetchAllTablesInSchema");
-                throw ex;
-            }
-        }
-        [HttpGet("FetchTable")]
-        public async Task<IActionResult> FetchTable(string tableName)
-        {
-            try
-            {
-                using (LogContext.PushProperty("Fetching table", tableName))
-                {
-                    _logger.LogInformation($"Fetch table: {tableName}");
-
-                    var results = await _QueryApplication.FetchTable();
-                    if (results != null && results.Any())
-                    {
-                        return Ok(results);
-                    }
-                    else
-                    {
-                        return NoContent();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error on FetchTable");
-                throw ex;
-            }
-        }
-        [HttpPost("RunQuery")]
-        public async Task<IActionResult> RunQuery()
-        {
-            try
-            {
-                using (LogContext.PushProperty("Fetching table", tableName))
-                {
-                    _logger.LogInformation($"Fetch table: {tableName}");
-
-                    var results = await _QueryApplication.FetchTable();
-                    if (results != null && results.Any())
-                    {
-                        return Ok(results);
-                    }
-                    else
-                    {
-                        return NoContent();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error on FetchTable");
                 throw ex;
             }
         }

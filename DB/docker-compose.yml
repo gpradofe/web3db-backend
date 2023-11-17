@@ -3,15 +3,16 @@ version: "3"
 services:
   ipfs:
     image: ipfs/go-ipfs:latest
-    container_name: ipfs_node
-    ports:
-      - 4001:4001 # The default IPFS port
-      - 8080:8080 # HTTP Gateway
-      - 5001:5001 # API Port
-    volumes:
-      - ipfs_data:/data/ipfs
     environment:
       - IPFS_PROFILE=server
+      - IPFS_PATH=/ipfsdata
+    volumes:
+      - ./data/ipfs:/ipfsdata
+    ports:
+      - "4001:4001"
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8083:8081"
+      - "127.0.0.1:5003:5001"
   namenode:
     image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
     container_name: namenode

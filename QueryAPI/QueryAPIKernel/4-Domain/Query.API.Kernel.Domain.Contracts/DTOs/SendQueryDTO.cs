@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace Query.API.Kernel.Domain.Contracts.DTOs
 {
-    public class TableDataDto
+    public class SendQueryDTO
     {
-        public List<DatabaseRowDto> Rows { get; set; }
-        public Dictionary<string, string> Columns { get; set; }
+        public string query { get; set; }
+        public string hash { get; set; }
     }
 }

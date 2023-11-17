@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Query.API.Kernel.Service.Core.APIBASE.StartupConfiguration;
 using Query.API.Kernel.Service.Core.APIBASE.StartupConfiguration.Swagger;
+using Query.API.Kernel.StartupConfiguration;
 namespace Query.API.Kernel
 {
     public class Startup
@@ -16,7 +17,6 @@ namespace Query.API.Kernel
         public IConfiguration _configuration { get; }
         #endregion
         #region Methods
-        //This method gets called by the runtime. Use this method to add services to the container.
 
         public void ConfigureServices(IServiceCollection services)
         {
@@ -39,7 +39,7 @@ namespace Query.API.Kernel
             {
                 jsonOptions.JsonSerializerOptions.PropertyNamingPolicy = null;
             });
-            // services.InitializeRedisDatabase(_configuration);
+            services.AddQueryApplication(_configuration);
             services.AddCors(options =>
             {
                 options.AddDefaultPolicy(
@@ -51,7 +51,6 @@ namespace Query.API.Kernel
 
         }
 
-        //This method gets called by the runtime. Use this method to add services to the container.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IApiVersionDescriptionProvider provider)
         {
             if (env.IsDevelopment())
@@ -59,6 +58,11 @@ namespace Query.API.Kernel
                 app.UseDeveloperExceptionPage();
             }
             app.UseHealthChecks("/healthycheck");
+            app.UseCors(x => x
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .SetIsOriginAllowed(origin => true)
+                .AllowCredentials());
             app.UseHttpsRedirection();
             app.UseRouting();
             app.AddSwaggers(provider);
@@ -67,11 +71,7 @@ namespace Query.API.Kernel
             {
                 endpoints.MapControllers();
             });
-            app.UseCors(x => x
-                .AllowAnyMethod()
-                .AllowAnyHeader()
-                .SetIsOriginAllowed(origin => true)
-                .AllowCredentials());
+
         }
         #endregion
 
