@@ -116,7 +116,7 @@ class QueryResource(Resource):
                 return jsonify({"message": message, "data": formatted_result, "hash": data_hash})
 
         except Exception as e:
-            return jsonify({"message": "An error occurred", "error": str(e), "data": None, "hash": None}), 500
+            return jsonify({"message": "An error occurred", "error": str(e), "data": None, "hash": None}), 413
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
