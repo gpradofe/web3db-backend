@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from flask_restx import Api, Resource, fields
 import requests
 from pyspark.sql import SparkSession
@@ -97,7 +97,13 @@ class QueryResource(Resource):
                     sql_dump = IPFSManager.fetch_sql_dump_from_ipfs(data_hash)
                     modifying_queries = json.loads(sql_dump)
                 except requests.exceptions.RequestException as e:
-                    return jsonify({"message": "Failed to fetch data from IPFS", "error": str(e), "data": None, "hash": None}), 500
+                    error_response = {
+                        "message": "Failed to fetch data from IPFS",
+                        "error": str(e),
+                        "data": None,
+                        "hash": None
+                    }
+                    return make_response(error_response, 500)
 
             # Execute the query
             raw_result = QueryEngine.execute_query(query, sql_dump if data_hash != "dummy_ipfs_hash" else None)
@@ -116,7 +122,13 @@ class QueryResource(Resource):
                 return jsonify({"message": message, "data": formatted_result, "hash": data_hash})
 
         except Exception as e:
-            return jsonify({"message": "An error occurred", "error": str(e), "data": None, "hash": None}), 413
+            error_response = {
+                "message": "An error occurred",
+                "error": str(e),
+                "data": None,
+                "hash": None
+            }
+            return make_response(error_response, 413)
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
