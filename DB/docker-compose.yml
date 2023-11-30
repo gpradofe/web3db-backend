@@ -146,8 +146,18 @@ services:
       - spark-master
       - hive-server
       - hive-metastore
+  p2p_network_service:
+    build:
+      context: .
+      dockerfile: p2p/Dockerfile
+    container_name: p2p_network_service
+    ports:
+      - "10000:10000"
+    volumes:
+      - ./data/p2p_network_service:/data
 volumes:
   hadoop_namenode:
   hadoop_datanode:
   hadoop_historyserver:
   ipfs_data:
+  p2p_network_service:
