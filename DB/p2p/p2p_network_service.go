@@ -5,17 +5,20 @@ import (
 	"log"
 	"time"
 
+	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
+
 	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/libp2p/go-libp2p-core/routing"
-	"github.com/libp2p/go-libp2p-discovery"
-	"github.com/libp2p/go-libp2p-kad-dht"
-	"github.com/libp2p/go-libp2p-p2p/net/connmgr"
-	"github.com/libp2p/go-libp2p-p2p/security/noise"
-	libp2ptls "github.com/libp2p/go-libp2p-p2p/security/tls"
-	"github.com/libp2p/go-libp2p-p2p/discovery/mdns"
+	dht "github.com/libp2p/go-libp2p-kad-dht"
+	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/routing"
+	"github.com/libp2p/go-libp2p/p2p/security/noise"
+	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
+	"github.com/libp2p/go-libp2p/core/discovery"
+    "github.com/libp2p/go-libp2p/discovery"
+
 )
 
 func main() {
@@ -44,7 +47,7 @@ func run() {
 	// Create a host with additional options like security, transports, and connection manager
 	h, err := libp2p.New(
 		libp2p.Identity(priv),
-		libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/10000", "/ip4/0.0.0.0/udp/10000/quic"),
+		libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/9000", "/ip4/0.0.0.0/udp/9000/quic"),
 		libp2p.Security(libp2ptls.ID, libp2ptls.New),
 		libp2p.Security(noise.ID, noise.New),
 		libp2p.DefaultTransports,
@@ -73,7 +76,6 @@ func run() {
 		log.Fatal(err)
 	}
 
-	// Discover peers using mDNS
 	mdns := discovery.NewMdnsService(ctx, h, time.Hour, discovery.ServiceTag)
 	mdns.RegisterNotifee(&discoveryNotifee{h})
 
