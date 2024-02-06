@@ -2,101 +2,101 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"fmt"
 	"log"
 	"time"
 
-	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
-
-	"github.com/libp2p/go-libp2p"
+	libp2p "github.com/libp2p/go-libp2p"
+	crypto "github.com/libp2p/go-libp2p/core/crypto"
+	host "github.com/libp2p/go-libp2p/core/host"
+	peerstore "github.com/libp2p/go-libp2p/core/peer"
+	routing "github.com/libp2p/go-libp2p/core/routing"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
-	"github.com/libp2p/go-libp2p/core/crypto"
-	"github.com/libp2p/go-libp2p/core/host"
-	"github.com/libp2p/go-libp2p/core/routing"
-	"github.com/libp2p/go-libp2p/p2p/security/noise"
-	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
-	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
-	"github.com/libp2p/go-libp2p/core/discovery"
-    "github.com/libp2p/go-libp2p/discovery"
-
+	mdns "github.com/libp2p/go-libp2p/p2p/discovery/mdns"
+	connmgr "github.com/libp2p/go-libp2p/p2p/net/connmgr"
+	noise "github.com/libp2p/go-libp2p/p2p/security/noise"
+	tls "github.com/libp2p/go-libp2p/p2p/security/tls"
+	discovery "github.com/libp2p/go-libp2p/discovery"
 )
 
-func main() {
-	run()
-}
-
-func run() {
-	// The context governs the lifetime of the libp2p node
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Generate a key pair for this host
-	priv, _, err := crypto.GenerateKeyPair(crypto.Ed25519, -1)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var idht *dht.IpfsDHT
-
-	// Create a connection manager
-	connmgr, err := connmgr.NewConnManager(100, 400, connmgr.WithGracePeriod(time.Minute))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Create a host with additional options like security, transports, and connection manager
-	h, err := libp2p.New(
-		libp2p.Identity(priv),
-		libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/9000", "/ip4/0.0.0.0/udp/9000/quic"),
-		libp2p.Security(libp2ptls.ID, libp2ptls.New),
-		libp2p.Security(noise.ID, noise.New),
-		libp2p.DefaultTransports,
-		libp2p.ConnectionManager(connmgr),
-		libp2p.NATPortMap(),
-		libp2p.Routing(func(h host.Host) (routing.PeerRouting, error) {
-			idht, err = dht.New(ctx, h)
-			return idht, err
-		}),
-		libp2p.EnableNATService(),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer h.Close()
-
+func setupDiscovery(ctx context.Context, h host.Host, dht *dht.IpfsDHT) {
 	// Setup mDNS discovery
-	mdnsService, err := mdns.NewMdnsService(ctx, h, discovery.MdnsServiceTag)
+	mdnsService, err := mdns.NewMdnsService(ctx, h, time.Hour, "web3db-service")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to start mDNS: %v", err)
 	}
 	defer mdnsService.Close()
 
-	// Setup DHT
-	if err := idht.Bootstrap(ctx); err != nil {
-		log.Fatal(err)
+	// Register with the local network
+	mdns.DiscoverLocalPeers(ctx, "web3db-service", h)
+
+	// Use DHT for global peer discovery
+	routingDiscovery := discovery.NewRoutingDiscovery(dht)
+	discovery.Advertise(ctx, routingDiscovery, "web3db-service")
+
+	peerChan, err := routingDiscovery.FindPeers(ctx, "web3db-service")
+	if err != nil {
+		log.Fatalf("failed to find peers: %v", err)
 	}
 
-	mdns := discovery.NewMdnsService(ctx, h, time.Hour, discovery.ServiceTag)
-	mdns.RegisterNotifee(&discoveryNotifee{h})
-
-	// Connect to bootstrap nodes
-	bootstrapPeers := dht.DefaultBootstrapPeers
-	for _, peerAddr := range bootstrapPeers {
-		peerinfo, _ := peer.AddrInfoFromP2pAddr(peerAddr)
-		if err := h.Connect(ctx, *peerinfo); err != nil {
-			log.Println("Error connecting to bootstrap peer:", err)
+	// Handle discovered peers
+	go func() {
+		for p := range peerChan {
+			if p.ID == h.ID() {
+				continue
+			}
+			log.Printf("Discovered new peer %s\n", p.ID.Pretty())
+			if _, err := h.Network().DialPeer(ctx, p.ID); err != nil {
+				log.Printf("Error connecting to peer %s: %v", p.ID.Pretty(), err)
+			}
 		}
+	}()
+}
+
+func main() {
+	ctx := context.Background()
+
+	// Generate a new identity key pair
+	priv, _, err := crypto.GenerateKeyPairWithReader(crypto.Ed25519, -1, rand.Reader)
+	if err != nil {
+		log.Fatalf("failed to generate private key: %v", err)
 	}
 
-	log.Printf("Hello World, my hosts ID is %s\n", h.ID())
-}
+	connManager, err := connmgr.NewConnManager(
+		100, // Lowwater
+		400, // HighWater
+		connmgr.WithGracePeriod(time.Minute),
+	)
+	if err != nil {
+		log.Fatalf("failed to create the connection manager: %v", err)
+	}
 
-// discoveryNotifee is notified when a new peer is discovered
-type discoveryNotifee struct {
-	h host.Host
-}
+	// Create a libp2p host
+	h, err := libp2p.New(ctx,
+		libp2p.Identity(priv),
+		libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/9000"),
+		libp2p.Security(noise.ID, noise.New),
+		libp2p.Security(tls.ID, tls.New),
+		libp2p.NATPortMap(),
+		libp2p.ConnectionManager(connManager),
+		libp2p.Routing(func(h host.Host) (routing.PeerRouting, error) {
+			return dht.New(ctx, h, dht.Mode(dht.ModeServer))
+		}),
+	)
+	if err != nil {
+		log.Fatalf("failed to create host: %v", err)
+	}
+	defer h.Close()
 
-func (n *discoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
-	log.Println("Discovered new peer:", pi.ID)
-	n.h.Connect(context.Background(), pi)
+	// Setup DHT for discovery
+	dht, err := dht.New(ctx, h, dht.Mode(dht.ModeServer))
+	if err != nil {
+		log.Fatalf("failed to create DHT: %v", err)
+	}
+
+	setupDiscovery(ctx, h, dht)
+
+	log.Printf("Your Host ID is: %s", h.ID())
+	select {} // hang forever
 }
