@@ -36,7 +36,7 @@ RUN pip install --trusted-host pypi.python.org \
     --upgrade
 
 # Expose port 5000 for the application
-EXPOSE 5000
+EXPOSE 3001
 
 # Command to run the application
 CMD ["python", "db_engine/app.py"]
