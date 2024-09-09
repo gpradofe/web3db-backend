@@ -119,4 +119,5 @@ class QueryResource(Resource):
             return jsonify({"message": "An error occurred", "error": str(e), "data": None, "hash": None}), 500
 
 if __name__ == "__main__":
-    app.run(port=3001)
+    app.run(host='0.0.0.0', port=3001)
+
