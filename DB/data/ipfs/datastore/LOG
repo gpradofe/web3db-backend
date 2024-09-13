@@ -116,3 +116,12 @@
 20:09:57.708080 db@open done T·448.01885ms
 20:19:36.655493 db@close closing
 20:19:36.671742 db@close done T·16.504003ms
+=============== Sep 4, 2024 (UTC) ===============
+19:45:29.578392 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+19:45:29.578554 version@stat F·[2 1] S·89KiB[77KiB 11KiB] Sc·[0.50 0.00]
+19:45:29.578568 db@open opening
+19:45:29.579193 version@stat F·[2 1] S·89KiB[77KiB 11KiB] Sc·[0.50 0.00]
+19:45:29.582005 db@janitor F·5 G·0
+19:45:29.582062 db@open done T·3.470002ms
+19:46:54.148148 db@close closing
+19:46:54.148294 db@close done T·108.871µs
