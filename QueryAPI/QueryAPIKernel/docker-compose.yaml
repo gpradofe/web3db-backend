@@ -13,4 +13,5 @@ services:
       - /etc/letsencrypt/archive/api.web3db.org/privkey1.pem:/https/privkey.pem:ro
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:80;https://+:443
     restart: unless-stopped
