@@ -1,3 +1,5 @@
+# docker-compose.yml
+
 version: "3.8"
 
 networks:
@@ -15,7 +17,7 @@ services:
       - ipfs_data:/ipfsdata
     ports:
       - "4001:4001"
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8082:8080"
       - "127.0.0.1:8083:8081"
       - "127.0.0.1:5003:5001"
     networks:
@@ -79,6 +81,26 @@ services:
     networks:
       - web3dbnetwork
 
+  spark-master:
+    image: bde2020/spark-master:3.1.2-hadoop3.2
+    environment:
+      - INIT_DAEMON_STEP=spark-master
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+    networks:
+      - web3dbnetwork
+
+  spark-worker:
+    image: bde2020/spark-worker:3.1.2-hadoop3.2
+    environment:
+      - "SPARK_MASTER=spark://spark-master:7077"
+      - INIT_DAEMON_STEP=spark-worker
+    ports:
+      - "8081:8081"
+    networks:
+      - web3dbnetwork
+
   db_engine:
     build:
       context: ./db_engine
@@ -93,9 +115,16 @@ services:
       - HIVE_METASTORE_URI=thrift://hive-metastore:9083
       - P2P_PORT=${P2P_PORT:-8000}
       - KNOWN_PEERS=${KNOWN_PEERS:-}
-      - NODE_ID=${NODE_ID:-}
+      - CERTFILE=/app/certs/server.crt
+      - KEYFILE=/app/certs/server.key
+      - CAFILE=/app/certs/ca.crt
+      - DEBUG=True
+      - TESTING=True
+    volumes:
+      - ./certs:/app/certs
     depends_on:
       - ipfs
+      - spark-master
       - hive-server
       - hive-metastore
     networks:
@@ -104,8 +133,27 @@ services:
       mode: replicated
       replicas: ${NUM_NODES:-3}
 
+  db_engine_tests:
+    build:
+      context: ./db_engine
+      dockerfile: Dockerfile
+    command: python -m unittest discover -v src/tests
+    environment:
+      - IPFS_API_URL=http://ipfs:5001
+      - SPARK_MASTER=spark://spark-master:7077
+      - HIVE_METASTORE_URI=thrift://hive-metastore:9083
+      - DEBUG=True
+      - TESTING=True
+    depends_on:
+      - db_engine
+      - ipfs
+      - spark-master
+      - hive-server
+      - hive-metastore
+    networks:
+      - web3dbnetwork
+
 volumes:
   hadoop_namenode:
   hadoop_datanode:
-  hadoop_historyserver:
   ipfs_data:

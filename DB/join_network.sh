@@ -36,5 +36,10 @@ for peer in "${PEER_ARRAY[@]}"; do
     echo "Connecting to peer: $peer"
     curl -X POST -H "Content-Type: application/json" -d "{\"peer_addr\":\"$peer\"}" http://localhost:$DB_ENGINE_PORT/peers/
 done
-
+# Run tests if the 'test' argument is provided
+if [ "$1" = "test" ]; then
+    echo "Running tests..."
+    ./run_tests.sh
+    exit $?
+fi
 echo "Node setup complete!"
